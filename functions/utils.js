@@ -14,7 +14,8 @@ const getChatReference = (chatId) =>
     .child(chatId)
     .child('messages')
 
-const updateHelper = async (ref, message, chatId, callback) =>
+
+const makeChatDataCaller = async (ref, chatId) => async (callback, args = {}) =>
   ref
     .orderByChild('chatId')
     .equalTo(chatId)
@@ -23,10 +24,11 @@ const updateHelper = async (ref, message, chatId, callback) =>
       const data = snapshot.val()
       const [key, chat] = Object.entries(data)[0]
 
-      return callback({key, chat, message, ref})
+      return {...args, key, chat, ref, chatId}
     })
+    .then(callback)
 
 
 exports.getUserChatsReference = getUserChatsReference
 exports.getChatReference = getChatReference
-exports.updateHelper = updateHelper
+exports.makeChatDataCaller = makeChatDataCaller
