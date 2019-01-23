@@ -12,7 +12,11 @@ exports.sendMessage = functions.https.onCall(async (data, context) => {
   const {text, chatId} = data
   const user = context.auth.uid
 
-  if (!text || !chatId) throw new Error('Message text or chatId error')
+  if (!text || !chatId) {
+    throw new functions
+      .https
+      .HttpsError('invalid-argument', 'Message text or chatId error')
+  }
 
   const message = {
     text,
@@ -32,18 +36,24 @@ exports.sendMessage = functions.https.onCall(async (data, context) => {
 
   const chatReference = getChatReference(chatId)
   chatReference.push(message).catch(err => {
-    throw new Error('Pushing message in chat error')
+    throw new functions
+      .https
+      .HttpsError('resource-exhausted', 'Pushing message in chat error')
   })
 
   const senderReference = getUserChatsReference(user)
   const senderChatDataCall = await makeChatDataCaller(senderReference, chatId)
   senderChatDataCall(updateReference, {message}).catch(err => {
-    throw new Error('Updating sender chat error')
+    throw new functions
+      .https
+      .HttpsError('resource-exhausted', 'Updating sender chat error')
   })
 
   const recipientChatDataCall = await senderChatDataCall(getRecipientReference)
   recipientChatDataCall(updateReference, {message}).catch(err => {
-    throw new Error('Updating recipient chat error')
+    throw new functions
+      .https
+      .HttpsError('resource-exhausted', 'Updating recipient chat error')
   })
 
   return text
