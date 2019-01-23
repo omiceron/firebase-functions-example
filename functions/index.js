@@ -58,3 +58,31 @@ exports.sendMessage = functions.https.onCall(async (data, context) => {
 
   return text
 })
+
+
+exports.createChatWith = functions.https.onCall(async (data, context) => {
+  const {userId} = data
+  const currentUserId = context.auth.uid
+
+  console.log('Creating new chat...')
+
+  const {key: chatId} = await admin.database()
+    .ref('chats')
+    .push({visibility: false})
+
+  await getUserChatsReference(currentUserId)
+    .push({userId, chatId, visibility: false})
+
+  if (userId === currentUserId) {
+    console.log('Self chat', chatId, 'was successfully created')
+    return chatId
+  }
+
+  getUserChatsReference(userId)
+    .push({userId: currentUserId, chatId, visibility: false})
+    .then(res => console.log('Chat', chatId, 'was successfully created'))
+
+
+  return chatId
+
+})
