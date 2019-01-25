@@ -9,7 +9,7 @@ const {
 admin.initializeApp()
 
 exports.sendMessage = functions.https.onCall(async (data, context) => {
-  const {text, chatId} = data
+  const {text, chatId, token} = data
   const user = context.auth.uid
 
   if (!text || !chatId) {
@@ -32,19 +32,11 @@ exports.sendMessage = functions.https.onCall(async (data, context) => {
   const chatReference = getChatReference(chatId)
 
   const message = {
+    token,
     text,
     user,
     timestamp: admin.database.ServerValue.TIMESTAMP,
   }
-
-  chatReference
-    .push(message)
-    .then(res => console.log('SEND MESSAGE:', 'message pushed to chat'))
-    .catch(err => {
-      throw new functions
-        .https
-        .HttpsError('resource-exhausted', 'Pushing message in chat error')
-    })
 
   const senderReference = getUserChatsReference(user)
   const senderChatDataCall = await makeChatDataCaller(senderReference, chatId)
@@ -72,7 +64,19 @@ exports.sendMessage = functions.https.onCall(async (data, context) => {
     console.log('SEND MESSAGE:', 'no recipient, self-chat')
   }
 
-  return text
+  const key = await chatReference
+    .push(message)
+    .then(res => {
+      console.log('SEND MESSAGE:', 'message pushed to chat')
+      return res.key
+    })
+    .catch(err => {
+      throw new functions
+        .https
+        .HttpsError('resource-exhausted', 'Pushing message in chat error')
+    })
+
+  return {key}
 })
 
 
@@ -95,7 +99,7 @@ exports.createChatWith = functions.https.onCall(async (data, context) => {
         .HttpsError('resource-exhausted', 'Create chat error')
     })
 
-  const key = await getUserChatsReference(currentUserId)
+  const {key} = await getUserChatsReference(currentUserId)
     .push({userId, chatId, visibility: false})
     .then(res => {
       console.log('CREATE CHAT:', 'sender chat updated')
@@ -121,6 +125,7 @@ exports.createChatWith = functions.https.onCall(async (data, context) => {
   }
 
   console.log('CREATE CHAT:', 'end')
-  return chatId
+
+  return {chatId, key}
 
 })
