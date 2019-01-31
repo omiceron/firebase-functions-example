@@ -129,3 +129,70 @@ exports.createChatWith = functions.https.onCall(async (data, context) => {
   return {chatId, key}
 
 })
+
+exports.createUser = functions.https.onCall(async (data, context) => {
+
+  console.log('CREATE USER:', 'start')
+
+  const user = context.auth.token
+  const {uid} = user
+  const reference = admin.database().ref('people')
+
+  const isCreated = await reference
+    .child(uid)
+    .once('value')
+    .then(snapshot => snapshot.exists())
+
+  if (isCreated) {
+    console.log('CREATE USER:', 'already created', uid)
+    return
+  }
+
+  let firstName = null, lastName = null
+
+  const {email = null, picture = null, name = ''} = user
+
+  if (name) {
+    [firstName, lastName] = name.split(' ')
+  } else {
+    firstName = data.firstName
+    admin.auth().updateUser(uid, {displayName: firstName})
+  }
+
+  console.log('CREATE USER:', 'end')
+
+  return reference.child(uid).update({firstName, lastName, email, avatar: picture})
+
+
+  // await reference
+  //   .child(user.uid)
+  //   .once('value', snapshot => {
+  //     console.log(snapshot.exists())
+  //
+  //     if (!snapshot.exists()) {
+  //       const {email, picture, name} = user
+  //
+  //       let firstName = null, lastName = null
+  //
+  //       if (name) {
+  //         [firstName, lastName] = name.split(' ')
+  //       } else {
+  //         admin.auth().updateUser(user.uid, {displayName: name})
+  //         // const {firstName: newUserFirstName} = this.getStore(AUTH_STORE)
+  //         // if (newUserFirstName) {
+  //         //   firstName = newUserFirstName
+  //         // firebase.auth().currentUser.updateProfile({displayName: newUserFirstName})
+  //         // }
+  //       }
+  //
+  //       return reference.child(user.uid).update({
+  //         firstName,
+  //         lastName,
+  //         email,
+  //         avatar: picture,
+  //       })
+  //     } else {
+  //       return null
+  //     }
+  //   })
+})
