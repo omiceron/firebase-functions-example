@@ -79,7 +79,6 @@ exports.sendMessage = functions.https.onCall(async (data, context) => {
   return {key}
 })
 
-
 exports.createChatWith = functions.https.onCall(async (data, context) => {
   const {userId} = data
   const currentUserId = context.auth.uid
@@ -130,9 +129,9 @@ exports.createChatWith = functions.https.onCall(async (data, context) => {
 
 })
 
-exports.createUser = functions.https.onCall(async (data, context) => {
+exports.checkUser = functions.https.onCall(async (data, context) => {
 
-  console.log('CREATE USER:', 'start')
+  console.log('CHECK USER:', 'start')
 
   const user = context.auth.token
   const {uid} = user
@@ -144,7 +143,7 @@ exports.createUser = functions.https.onCall(async (data, context) => {
     .then(snapshot => snapshot.exists())
 
   if (isCreated) {
-    console.log('CREATE USER:', 'already created', uid)
+    console.log('CHECK USER:', 'already created', uid)
     return
   }
 
@@ -159,9 +158,14 @@ exports.createUser = functions.https.onCall(async (data, context) => {
     admin.auth().updateUser(uid, {displayName: firstName})
   }
 
-  console.log('CREATE USER:', 'end')
+  console.log('CHECK USER:', 'end')
 
-  return reference.child(uid).update({firstName, lastName, email, avatar: picture})
+  return reference.child(uid).update({
+    firstName,
+    lastName,
+    email,
+    avatar: picture,
+  })
 
 
   // await reference
@@ -196,3 +200,31 @@ exports.createUser = functions.https.onCall(async (data, context) => {
   //     }
   //   })
 })
+
+exports.createUser = functions.https.onCall(
+  async (data, context) => {
+    console.log('CREATE USER:', 'start')
+
+    const {displayName: firstName, email, uid} =
+      await admin.auth().createUser(data)
+        .catch(err => {
+          throw new functions
+            .https
+            .HttpsError('internal', 'Auth createUser error')
+        })
+
+    console.log('CREATE USER:', 'user created')
+
+    await admin.database()
+      .ref('people')
+      .child(uid)
+      .update({firstName, email})
+      .catch(err => {
+        throw new functions
+          .https
+          .HttpsError('internal', 'Database update user error')
+      })
+
+    console.log('CREATE USER:', 'end')
+
+  })
