@@ -1,5 +1,14 @@
 const functions = require('firebase-functions')
 const admin = require('firebase-admin')
+
+// const path = require('path')
+// const os = require('os')
+// const fs = require('fs')
+// const request = require('request-promise')
+
+// const {Storage} = require('@google-cloud/storage')
+// const storage = new Storage()
+
 const {
   getChatReference,
   getUserChatsReference,
@@ -129,44 +138,32 @@ exports.createChatWith = functions.https.onCall(async (data, context) => {
 
 })
 
-exports.checkUser = functions.https.onCall(async (data, context) => {
+exports.checkUser = functions.https.onCall(async ({uid, ...data}, context) => {
 
   console.log('CHECK USER:', 'start')
 
-  const user = context.auth.token
-  const {uid} = user
+
   const reference = admin.database().ref('people')
 
-  const isCreated = await reference
-    .child(uid)
-    .once('value')
-    .then(snapshot => snapshot.exists())
-
-  if (isCreated) {
-    console.log('CHECK USER:', 'already created', uid)
-    return
-  }
-
-  let firstName = null, lastName = null
-
-  const {email = null, picture = null, name = ''} = user
-
-  if (name) {
-    [firstName, lastName] = name.split(' ')
-  } else {
-    firstName = data.firstName
-    admin.auth().updateUser(uid, {displayName: firstName})
-  }
+  // const isCreated = await reference
+  //   .child(uid)
+  //   .once('value')
+  //   .then(snapshot => snapshot.exists())
+  //
+  // if (isCreated) {
+  //   console.log('CHECK USER:', 'already created', uid)
+  //   return
+  // }
 
   console.log('CHECK USER:', 'end')
 
-  return reference.child(uid).update({
-    firstName,
-    lastName,
-    email,
-    avatar: picture,
-  })
+  reference.child(uid).update(data)
 
+  // const tempFilePath = path.join(os.tmpdir(), 'temp')
+  //
+  // await request(avatar).pipe(fs.createWriteStream(tempFilePath)).catch(console.log)
+  //
+  // await storage.bucket().upload(tempFilePath).catch(console.log)
 
   // await reference
   //   .child(user.uid)
